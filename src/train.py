@@ -1,63 +1,57 @@
+import pickle as pkl
 from pathlib import Path
 
-import click
-import numpy as np
+import lightgbm as lgbm
 import polars as pl
 
-from src.pair import create_pair_dataset
-from src.preprocess import get_fold, label_encode, load_data
 
-RACE_GROUP = [
-    "American Indian or Alaska Native",
-    "Asian",
-    "Black or African-American",
-    "More than one race",
-    "Native Hawaiian or other Pacific Islander",
-    "White",
-]
-NUM_FOLD = 5
+def train_lgbm(
+    params: dict,
+    df_train: pl.DataFrame,
+    df_valid: pl.DataFrame,
+    feature_names: list[str],
+    categorical_feature: list[str],
+    save_dir: Path,
+) -> lgbm.Booster:
+    save_dir.mkdir(exist_ok=True, parents=True)
 
+    print(f"Num train = {len(df_train)}")
+    print(f"Num valid = {len(df_valid)}")
 
-@click.command()
-@click.option("--debug/--no-debug", type=bool, is_flag=True)
-def main(debug: bool) -> None:
-    root_dir = Path(__file__).resolve().parent.parent
-    data_dir = root_dir / "data"
-    out_dir = root_dir / "out"
-    out_dir.mkdir(exist_ok=True, parents=True)
-
-    df, _, column_dict = load_data(data_dir=data_dir)
-    print(df["race_group"].unique().sort().to_list())
-    if debug:
-        df = df.head(100)
-
-    df_preprocess, categorical_transform_dict = label_encode(
-        df_=df, column_dict=column_dict
+    ds_train = lgbm.Dataset(
+        df_train[feature_names].to_pandas(),
+        label=df_train["label"].to_pandas(),
+        free_raw_data=False,
+        categorical_feature=categorical_feature,
+    )
+    ds_valid = lgbm.Dataset(
+        df_valid[feature_names].to_pandas(),
+        label=df_valid["label"].to_pandas(),
+        reference=ds_train,
+        free_raw_data=False,
+        categorical_feature=categorical_feature,
     )
 
-    for race in RACE_GROUP:
-        race_dir = out_dir / race
-        race_dir.mkdir(exist_ok=True, parents=True)
+    early_stopping_callback = lgbm.early_stopping(
+        stopping_rounds=params["early_stopping_round"], first_metric_only=True
+    )
+    log_evaluation_callback = lgbm.log_evaluation(period=params["early_stopping_round"])
+    eval_result = {}
+    record_evaluation = lgbm.record_evaluation(eval_result)
 
-        df_race = df_preprocess.filter(pl.col("race_group") == race)
-        df_race = get_fold(df=df_race, num_fold=NUM_FOLD, seed=43)
-        df_race.write_parquet(race_dir / "df_race.parquet")
+    model = lgbm.train(
+        params=params,
+        train_set=ds_train,
+        valid_sets=(ds_valid, ds_train),
+        callbacks=[
+            early_stopping_callback,
+            log_evaluation_callback,
+            record_evaluation,
+        ],
+    )
 
-        for fold in range(NUM_FOLD):
-            print("#" * 50 + f"\n### Fold = {fold + 1}\n" + "#" * 50)
-            df_train = df_race.filter(pl.col("fold") != fold)
-            df_valid = df_race.filter(pl.col("fold") == fold)
+    model.save_model(save_dir / "model.txt")
+    with open(save_dir / "eval_result.pkl", "wb") as f:
+        pkl.dump(eval_result, f)
 
-            df_train_dataset, column_dict_fold = create_pair_dataset(
-                df=df_train, column_dict=column_dict, seed=43 + fold
-            )
-            df_valid_dataset, _ = create_pair_dataset(
-                df=df_valid, column_dict=column_dict, seed=43 + fold
-            )
-            break
-        break
-    print(df_train_dataset)
-
-
-if __name__ == "__main__":
-    main()
+    return model

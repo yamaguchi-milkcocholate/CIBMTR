@@ -17,6 +17,7 @@ lifelines = "^0.30.0"
 black = "^25.1.0"
 isort = "^6.0.0"
 scikit-learn = "^1.6.1"
+pyarrow = "^19.0.0"
 
 
 [build-system]
