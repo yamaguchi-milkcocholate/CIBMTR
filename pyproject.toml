@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "cibmtr"
+version = "0.1.0"
+description = ""
+authors = ["yamaguchi-milkcocholate <zuuuubo.tetsu@outlook.jp>"]
+readme = "README.md"
+packages = [
+    { include = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+polars = "^1.22.0"
+numpy = "^2.2.3"
+lightgbm = "^4.6.0"
+lifelines = "^0.30.0"
+black = "^25.1.0"
+isort = "^6.0.0"
+scikit-learn = "^1.6.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
