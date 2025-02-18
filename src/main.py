@@ -1,3 +1,4 @@
+import pickle as pkl
 from pathlib import Path
 
 import click
@@ -34,6 +35,8 @@ def main(debug: bool) -> None:
     df_preprocess, categorical_transform_dict = label_encode(
         df_=df, column_dict=column_dict
     )
+    with open(out_dir / "categorical_transform_dict.pkl", "wb") as f:
+        pkl.dump(categorical_transform_dict, f)
 
     params = {
         "objective": "binary",
@@ -72,7 +75,7 @@ def main(debug: bool) -> None:
                 column_dict_fold["continuous"] + column_dict_fold["categorical"]
             )
 
-            model = train_lgbm(
+            _ = train_lgbm(
                 params=params,
                 df_train=df_train_dataset,
                 df_valid=df_valid_dataset,
@@ -80,9 +83,8 @@ def main(debug: bool) -> None:
                 feature_names=feature_names,
                 categorical_feature=column_dict_fold["categorical"],
             )
-            print(model)
-            break
-        break
+            with open(fold_dir / "column_dict.pkl", "wb") as f:
+                pkl.dump(column_dict_fold, f)
 
 
 if __name__ == "__main__":
