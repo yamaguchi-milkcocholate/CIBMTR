@@ -41,10 +41,13 @@ def main(debug: bool) -> None:
     params = {
         "objective": "binary",
         "metric": "auc",
-        "max_depth": 3,
-        "feature_fraction": 0.4,
-        "learning_rate": 0.02,
-        "num_iterations": 2500,
+        "num_leaves": 5,
+        "feature_fraction": 0.09724083464897226,
+        "bagging_fraction": 0.037088945757790925,
+        "bagging_freq": 6,
+        "lambda_l1": 3.4021288169850685e-05,
+        "lambda_l2": 3.5995838920722445,
+        "num_iterations": 10000,
         "verbosity": -1,
         "early_stopping_round": 50,
     }
