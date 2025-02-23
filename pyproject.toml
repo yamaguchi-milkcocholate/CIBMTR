@@ -19,6 +19,8 @@ scikit-learn = "^1.6.1"
 pyarrow = "^19.0.0"
 optuna = "^4.2.1"
 catboost = "^1.2.7"
+torch = "^2.6.0"
+pytorch-lightning = "^2.5.0.post0"
 
 
 [build-system]
